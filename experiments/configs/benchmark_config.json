@@ -1,0 +1,20 @@
+{
+  "experiment_name": "Macroeconomic-Shock-Benchmark",
+  "description": "Comparative evaluation of 4 retraining policies under severe concept and covariate shift",
+  "model_algorithm": "random_forest",
+  "dataset": "credit_default",
+  "shift_scenario": "concept_shift",
+  "parameters": {
+    "num_windows": 5,
+    "window_size": 250,
+    "periodic_interval": 2,
+    "drift_psi_threshold": 0.20,
+    "random_seed": 42
+  },
+  "evaluated_policies": [
+    "static",
+    "periodic",
+    "drift_triggered",
+    "gated_retraining"
+  ]
+}
