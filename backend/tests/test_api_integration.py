@@ -13,7 +13,7 @@ def setup_database():
 def test_models_flow():
     # 1. Train model
     payload = {
-        "name": "Integration-Test-Model",
+        "name": "CreditRiskBenchmark",
         "version": "1.0.0",
         "algorithm": "logistic_regression",
         "dataset_name": "credit_default",

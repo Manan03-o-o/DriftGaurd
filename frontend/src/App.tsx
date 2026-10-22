@@ -6,7 +6,6 @@ import { ModelsPage } from './pages/ModelsPage';
 import { DriftMonitorPage } from './pages/DriftMonitorPage';
 import { ExperimentCenterPage } from './pages/ExperimentCenterPage';
 import { ModelQualityPage } from './pages/ModelQualityPage';
-import { DocumentationPage } from './pages/DocumentationPage';
 import { ReplayModal } from './components/ReplayModal';
 import { TrainModelModal } from './components/TrainModelModal';
 import { api } from './services/api';
@@ -221,10 +220,6 @@ export const App: React.FC = () => {
     quality: {
       title: 'Delayed Ground-Truth & Predictive Auditing',
       subtitle: 'Confusion matrices, class breakdown, and empirical degradation independent of feature shift'
-    },
-    docs: {
-      title: 'Scientific Methodology & Architecture',
-      subtitle: 'Theoretical derivations, team responsibility breakdown, and experiment protocols'
     }
   };
 
@@ -318,8 +313,6 @@ export const App: React.FC = () => {
               isLoading={isLoading}
             />
           )}
-
-          {currentTab === 'docs' && <DocumentationPage />}
         </main>
       </div>
 

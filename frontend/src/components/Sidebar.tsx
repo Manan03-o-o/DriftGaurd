@@ -5,7 +5,6 @@ import {
   Activity,
   FlaskConical,
   CheckCircle2,
-  BookOpen,
   ShieldAlert
 } from 'lucide-react';
 import type { SystemStatus } from '../types';
@@ -27,7 +26,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'drift', label: 'Drift Monitor', icon: Activity },
     { id: 'experiments', label: 'Experiment Center', icon: FlaskConical },
     { id: 'quality', label: 'Model Quality', icon: CheckCircle2 },
-    { id: 'docs', label: 'Methodology & API', icon: BookOpen },
   ];
 
   return (
@@ -103,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400 px-1 font-mono">
           <span>DriftGuard v1.0</span>
-          <span>B.Tech Project</span>
+          <span className="text-emerald-400 font-semibold">Production</span>
         </div>
       </div>
     </aside>
