@@ -178,27 +178,3 @@ Run the full backend test suite:
 
 ---
 
-## 8. Team of Four Responsibilities & Deliverables
-
-| Team Member | Role | Key Contributions |
-|---|---|---|
-| **Student 1** | ML & Drift Algorithms | KS 2-sample test, Benjamini-Hochberg FDR correction, decile-binned PSI, ADWIN detector, and synthetic shift generator. |
-| **Student 2** | Backend & MLOps Architecture | FastAPI REST endpoints, SQLAlchemy ORM schema, scikit-learn pipelines with leakage prevention, and model artifact serialization. |
-| **Student 3** | Retraining Policies & Evaluation | Comparative simulation harness for 4 retraining strategies, validation gating mechanisms, and delayed label performance tracking. |
-| **Student 4** | Frontend Dashboard & Visualization | React/TypeScript dashboard, Recharts interactive performance trajectories, drift distribution diagnostics, and demo automation. |
-
-*Full viva defense topics and role breakdown: [docs/team-responsibilities.md](docs/team-responsibilities.md)*
-
----
-
-## 9. Known Limitations
-
-1. **Storage Defaults**: Uses SQLite for instant local zero-setup development. For production clustering, switch to PostgreSQL using the provided `DATABASE_URL` environment variable.
-2. **Dataset Domain**: Default showcase uses a realistic tabular credit risk distribution (4,000 observations). While scikit-learn's breast cancer dataset is also supported, image/unstructured data drift (e.g. embedding drift via MMD) is out of scope for this release.
-3. **Retraining Scope**: Retraining operates synchronously on lightweight tabular pipelines; enterprise-scale distributed training on massive clusters should incorporate a Celery/Redis worker queue.
-
----
-
-## 10. License
-
-Developed for academic presentation and research evaluation under the MIT License.
