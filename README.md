@@ -7,10 +7,6 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-MIT-gray)](LICENSE)
 
-> **Final-Year B.Tech Computer Science Capstone Project**  
-> Built by a team of four students to monitor machine learning models under controlled distribution shifts, evaluate statistical drift, audit delayed ground-truth predictive quality, and benchmark automated retraining strategies.
-
----
 
 ## 1. Project Overview
 
