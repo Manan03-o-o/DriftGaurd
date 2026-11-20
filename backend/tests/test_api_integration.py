@@ -80,3 +80,26 @@ def test_models_flow():
     assert p_res.status_code == 200
     exp = p_res.json()
     assert "policy_comparison" in exp
+
+    # 7. Explainability endpoint
+    exp_res = client.get(f"/api/v1/models/{model_id}/explainability")
+    assert exp_res.status_code == 200
+    exp_data = exp_res.json()
+    assert len(exp_data["feature_importances"]) > 0
+    assert "educational_disclaimer" in exp_data
+
+    # 8. Activation endpoint
+    act_res = client.post(f"/api/v1/models/{model_id}/activate")
+    assert act_res.status_code == 200
+    assert act_res.json()["is_active"] is True
+
+    # 9. Comparison endpoint
+    comp_res = client.post("/api/v1/models/compare", json={
+        "champion_id": model_id,
+        "challenger_id": model_id,
+        "tolerance": 0.02
+    })
+    assert comp_res.status_code == 200
+    comp_data = comp_res.json()
+    assert "is_eligible_for_promotion" in comp_data
+    assert comp_data["is_eligible_for_promotion"] is True

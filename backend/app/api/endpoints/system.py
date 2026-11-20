@@ -4,7 +4,17 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.database.session import get_db
-from app.database.models import ModelRegistration, MonitoringWindow, Experiment
+from app.database.models import (
+    ModelRegistration,
+    MonitoringWindow,
+    Experiment,
+    PredictionBatch,
+    StreamSession,
+    ModelQualitySnapshot,
+    Alert,
+    DataQualityAudit
+)
+from app.services.model_service import ModelService
 from app.schemas.system import SystemStatusResponse
 from app.core.config import settings
 
@@ -40,3 +50,27 @@ def get_system_status(db: Session = Depends(get_db)):
             "debug": settings.DEBUG
         }
     )
+
+
+@router.post("/reset-demo")
+def reset_demo_data(db: Session = Depends(get_db)):
+    """
+    Cleans up simulated streaming records, alerts, quality snapshots, and audits
+    while preserving the baseline model registration for presentation resets.
+    """
+    try:
+        db.query(Alert).delete()
+        db.query(DataQualityAudit).delete()
+        db.query(ModelQualitySnapshot).delete()
+        db.query(MonitoringWindow).delete()
+        db.query(PredictionBatch).delete()
+        db.query(StreamSession).delete()
+        db.query(Experiment).delete()
+        db.commit()
+
+        # Ensure baseline model exists
+        ModelService.ensure_default_model(db)
+        return {"status": "success", "message": "Demo data safely reset to clean baseline."}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}

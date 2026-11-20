@@ -38,3 +38,37 @@ class ModelPredictionResponse(BaseModel):
     model_id: str
     predictions: List[Dict[str, Any]]
     evaluation_metrics: Optional[Dict[str, Any]] = None
+
+
+class FeatureImportanceItem(BaseModel):
+    feature: str
+    raw_feature: str
+    importance: float
+    percentage: float
+
+
+class ModelExplainabilityResponse(BaseModel):
+    model_id: str
+    model_name: str
+    version: str
+    algorithm: str
+    method: str
+    feature_importances: List[FeatureImportanceItem]
+    top_features: List[str]
+    sample_prediction_explanation: Optional[Dict[str, Any]] = None
+    educational_disclaimer: str
+
+
+class ModelComparisonRequest(BaseModel):
+    champion_id: str
+    challenger_id: str
+    tolerance: float = Field(default=0.02, ge=0.0, le=0.20, description="Acceptable degradation tolerance for candidate promotion")
+
+
+class ModelComparisonResponse(BaseModel):
+    champion: Dict[str, Any]
+    challenger: Dict[str, Any]
+    delta_metrics: Dict[str, Any]
+    recommendation: str
+    is_eligible_for_promotion: bool
+    tolerance_applied: float

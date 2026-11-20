@@ -6,6 +6,9 @@ import { ModelsPage } from './pages/ModelsPage';
 import { DriftMonitorPage } from './pages/DriftMonitorPage';
 import { ExperimentCenterPage } from './pages/ExperimentCenterPage';
 import { ModelQualityPage } from './pages/ModelQualityPage';
+import { AlertsCenterPage } from './pages/AlertsCenterPage';
+import { DataQualityPage } from './pages/DataQualityPage';
+import { SimulationDemoPage } from './pages/SimulationDemoPage';
 import { ReplayModal } from './components/ReplayModal';
 import { TrainModelModal } from './components/TrainModelModal';
 import { api } from './services/api';
@@ -30,6 +33,7 @@ export const App: React.FC = () => {
   const [qualityHistory, setQualityHistory] = useState<ModelQualityHistory | null>(null);
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [activeStream, setActiveStream] = useState<StreamSession | null>(null);
+  const [unresolvedAlertsCount, setUnresolvedAlertsCount] = useState<number>(0);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -75,17 +79,19 @@ export const App: React.FC = () => {
   const loadModelData = useCallback(async (modelId: string) => {
     if (!modelId) return;
     try {
-      const [summary, windows, quality, exps] = await Promise.all([
+      const [summary, windows, quality, exps, alertStats] = await Promise.all([
         api.getDriftSummary(modelId).catch(() => null),
         api.getMonitoringHistory(modelId, 50).catch(() => []),
         api.getModelQualityHistory(modelId).catch(() => null),
-        api.getExperiments().catch(() => [])
+        api.getExperiments().catch(() => []),
+        api.getAlertStats(modelId).catch(() => null)
       ]);
 
       if (summary) setDriftSummary(summary);
       setMonitoringWindows(windows);
       if (quality) setQualityHistory(quality);
       if (exps) setExperiments(exps);
+      if (alertStats) setUnresolvedAlertsCount(alertStats.unresolved_alerts);
     } catch (err: any) {
       console.error('Failed to load model-specific metrics:', err);
     }
@@ -161,6 +167,20 @@ export const App: React.FC = () => {
     }
   };
 
+  // Handler: Activate Model as Champion
+  const handleActivateModel = async (id: string) => {
+    try {
+      setIsLoading(true);
+      await api.activateModel(id);
+      await loadInitialData();
+      showSuccess('Model successfully promoted to Active Production Champion.');
+    } catch (err: any) {
+      showError(`Activation failed: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Handler: Run Policy Experiment
   const handleRunExperiment = async (params: {
     model_id: string;
@@ -220,6 +240,18 @@ export const App: React.FC = () => {
     quality: {
       title: 'Delayed Ground-Truth & Predictive Auditing',
       subtitle: 'Confusion matrices, class breakdown, and empirical degradation independent of feature shift'
+    },
+    alerts: {
+      title: 'Smart Alert Center',
+      subtitle: 'Automated statistical drift and empirical performance degradation alerts with recommended actions'
+    },
+    data_quality: {
+      title: 'Data Ingestion Quality & Hygiene Monitor',
+      subtitle: 'Schema validation, missingness, duplicate observations, and numerical IQR outlier audits'
+    },
+    simulation: {
+      title: 'Live Simulation & Guided Viva Demonstration',
+      subtitle: 'Sequential streaming ingestion engine and 12-step guided examination walkthrough'
     }
   };
 
@@ -230,6 +262,7 @@ export const App: React.FC = () => {
         currentTab={currentTab}
         onTabChange={setCurrentTab}
         systemStatus={systemStatus}
+        unresolvedAlertsCount={unresolvedAlertsCount}
       />
 
       {/* Main Content Area */}
@@ -267,6 +300,9 @@ export const App: React.FC = () => {
           {currentTab === 'overview' && (
             <OverviewPage
               model={selectedModel}
+              models={models}
+              selectedModelId={selectedModelId}
+              onSelectModel={setSelectedModelId}
               driftSummary={driftSummary}
               qualityHistory={qualityHistory}
               experiments={experiments}
@@ -275,6 +311,7 @@ export const App: React.FC = () => {
               onOpenExperiment={() => {
                 setCurrentTab('experiments');
               }}
+              onOpenTrainModal={() => setIsTrainModalOpen(true)}
             />
           )}
 
@@ -284,6 +321,7 @@ export const App: React.FC = () => {
               selectedModel={selectedModel}
               onSelectModel={setSelectedModelId}
               onOpenTrainModal={() => setIsTrainModalOpen(true)}
+              onActivateModel={handleActivateModel}
             />
           )}
 
@@ -311,6 +349,38 @@ export const App: React.FC = () => {
               activeStream={activeStream}
               onAttachBatchLabels={handleAttachBatchLabels}
               isLoading={isLoading}
+            />
+          )}
+
+          {currentTab === 'alerts' && (
+            <AlertsCenterPage
+              models={models}
+              selectedModelId={selectedModelId}
+              onNavigate={setCurrentTab}
+              onOpenReplayModal={() => setIsReplayModalOpen(true)}
+              onOpenExperiment={() => setCurrentTab('experiments')}
+            />
+          )}
+
+          {currentTab === 'data_quality' && (
+            <DataQualityPage
+              model={selectedModel}
+              models={models}
+              selectedModelId={selectedModelId}
+              onSelectModel={setSelectedModelId}
+            />
+          )}
+
+          {currentTab === 'simulation' && (
+            <SimulationDemoPage
+              model={selectedModel}
+              models={models}
+              selectedModelId={selectedModelId}
+              onSelectModel={setSelectedModelId}
+              onNavigate={setCurrentTab}
+              onRefreshAll={handleRefresh}
+              showSuccess={showSuccess}
+              showError={showError}
             />
           )}
         </main>

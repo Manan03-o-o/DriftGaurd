@@ -13,6 +13,7 @@ class PolicyExperimentRequest(BaseModel):
     window_size: int = Field(default=200, ge=50, le=1000)
     periodic_interval: int = Field(default=2, ge=1, le=5)
     drift_psi_threshold: float = Field(default=0.20, ge=0.05, le=0.80)
+    tolerance: float = Field(default=0.02, ge=0.0, le=0.20, description="Gated policy promotion tolerance")
     random_seed: int = Field(default=42)
 
 

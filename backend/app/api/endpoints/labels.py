@@ -6,6 +6,7 @@ from app.database.session import get_db
 from app.database.models import PredictionBatch, ModelRegistration, ModelQualitySnapshot
 from app.schemas.labels import AttachLabelsRequest, ModelQualityResponse, ModelQualityHistoryResponse
 from app.ml.evaluation import evaluate_batch_quality
+from app.services.alert_service import AlertService
 
 router = APIRouter()
 
@@ -55,6 +56,13 @@ def attach_labels(req: AttachLabelsRequest, db: Session = Depends(get_db)):
     db.add(snapshot)
     db.commit()
     db.refresh(snapshot)
+
+    # Automatically generate Alert if performance degradation detected
+    try:
+        AlertService.generate_alert_for_degradation(db, snapshot, model)
+    except Exception:
+        pass
+
     return snapshot
 
 

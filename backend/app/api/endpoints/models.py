@@ -7,7 +7,10 @@ from app.schemas.models import (
     ModelTrainRequest,
     ModelRegistrationResponse,
     ModelEvaluateRequest,
-    ModelPredictionResponse
+    ModelPredictionResponse,
+    ModelComparisonRequest,
+    ModelComparisonResponse,
+    ModelExplainabilityResponse
 )
 from app.services.model_service import ModelService
 from app.ml.training import load_model_artifact, evaluate_predictions
@@ -37,6 +40,45 @@ def get_registered_models(
         default_model = ModelService.ensure_default_model(db)
         return [default_model]
     return models
+
+
+@router.post("/compare", response_model=ModelComparisonResponse)
+def compare_models(req: ModelComparisonRequest, db: Session = Depends(get_db)):
+    try:
+        comparison = ModelService.compare_models(
+            db,
+            champion_id=req.champion_id,
+            challenger_id=req.challenger_id,
+            tolerance=req.tolerance
+        )
+        return comparison
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Model comparison failed: {str(e)}")
+
+
+@router.post("/{model_id}/activate", response_model=ModelRegistrationResponse)
+@router.patch("/{model_id}/activate", response_model=ModelRegistrationResponse)
+def activate_model(model_id: str, db: Session = Depends(get_db)):
+    try:
+        model = ModelService.activate_model(db, model_id)
+        return model
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Model activation failed: {str(e)}")
+
+
+@router.get("/{model_id}/explainability", response_model=ModelExplainabilityResponse)
+def get_model_explainability(model_id: str, db: Session = Depends(get_db)):
+    try:
+        explainability = ModelService.get_model_explainability(db, model_id)
+        return explainability
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not compute explainability: {str(e)}")
 
 
 @router.get("/{model_id}", response_model=ModelRegistrationResponse)

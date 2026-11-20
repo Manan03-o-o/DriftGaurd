@@ -34,6 +34,8 @@ class ModelRegistration(Base):
     monitoring_windows = relationship("MonitoringWindow", back_populates="model", cascade="all, delete-orphan")
     quality_snapshots = relationship("ModelQualitySnapshot", back_populates="model", cascade="all, delete-orphan")
     experiments = relationship("Experiment", back_populates="model", cascade="all, delete-orphan")
+    alerts = relationship("Alert", back_populates="model", cascade="all, delete-orphan")
+    quality_audits = relationship("DataQualityAudit", back_populates="model", cascade="all, delete-orphan")
 
 
 class StreamSession(Base):
@@ -125,3 +127,46 @@ class Experiment(Base):
     created_at = Column(DateTime, default=utc_now)
 
     model = relationship("ModelRegistration", back_populates="experiments")
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id = Column(String(64), primary_key=True, default=generate_uuid)
+    model_id = Column(String(64), ForeignKey("model_registrations.id", ondelete="CASCADE"), nullable=False)
+    window_id = Column(String(64), nullable=True)
+    stream_id = Column(String(64), nullable=True)
+    batch_id = Column(String(64), nullable=True)
+    severity = Column(String(32), nullable=False, default="MEDIUM")  # INFO, LOW, MEDIUM, HIGH, CRITICAL
+    title = Column(String(256), nullable=False)
+    message = Column(Text, nullable=False)
+    affected_feature = Column(String(128), nullable=True)
+    metric_name = Column(String(64), nullable=True)  # e.g. "PSI", "KS_STAT", "DELTA_F1"
+    metric_value = Column(Float, nullable=True)
+    threshold = Column(Float, nullable=True)
+    recommended_action = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False)
+    is_resolved = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=utc_now)
+
+    model = relationship("ModelRegistration", back_populates="alerts")
+
+
+class DataQualityAudit(Base):
+    __tablename__ = "data_quality_audits"
+
+    id = Column(String(64), primary_key=True, default=generate_uuid)
+    model_id = Column(String(64), ForeignKey("model_registrations.id", ondelete="CASCADE"), nullable=False)
+    dataset_name = Column(String(128), nullable=False)
+    records_count = Column(Integer, nullable=False)
+    overall_score = Column(Float, nullable=False)  # 0 to 100
+    missing_values_count = Column(Integer, nullable=False, default=0)
+    missing_percentage = Column(Float, nullable=False, default=0.0)
+    duplicate_rows_count = Column(Integer, nullable=False, default=0)
+    outlier_count = Column(Integer, nullable=False, default=0)
+    schema_valid = Column(Boolean, default=True)
+    validation_errors = Column(JSON, nullable=False)  # List of error strings
+    feature_scores = Column(JSON, nullable=False)  # Dict of feature quality metrics
+    created_at = Column(DateTime, default=utc_now)
+
+    model = relationship("ModelRegistration", back_populates="quality_audits")

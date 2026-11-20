@@ -5,7 +5,10 @@ import {
   Activity,
   FlaskConical,
   CheckCircle2,
-  ShieldAlert
+  ShieldAlert,
+  Bell,
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
 import type { SystemStatus } from '../types';
 
@@ -13,19 +16,24 @@ interface SidebarProps {
   currentTab: string;
   onTabChange: (tab: string) => void;
   systemStatus: SystemStatus | null;
+  unresolvedAlertsCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   onTabChange,
-  systemStatus
+  systemStatus,
+  unresolvedAlertsCount = 0
 }) => {
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'models', label: 'Model Registry', icon: Cpu },
     { id: 'drift', label: 'Drift Monitor', icon: Activity },
+    { id: 'alerts', label: 'Smart Alerts', icon: Bell, badge: unresolvedAlertsCount > 0 ? unresolvedAlertsCount : undefined },
+    { id: 'data_quality', label: 'Data Quality', icon: ShieldCheck },
     { id: 'experiments', label: 'Experiment Center', icon: FlaskConical },
     { id: 'quality', label: 'Model Quality', icon: CheckCircle2 },
+    { id: 'simulation', label: 'Demo & Simulation', icon: Sparkles },
   ];
 
   return (
@@ -60,14 +68,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                 isActive
                   ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-500/30 shadow-sm shadow-indigo-500/10'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
-              <span>{item.label}</span>
+              <div className="flex items-center gap-3">
+                <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
+                <span>{item.label}</span>
+              </div>
+              {item.badge !== undefined && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-600 text-white font-bold">
+                  {item.badge}
+                </span>
+              )}
             </button>
           );
         })}
@@ -97,11 +112,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {systemStatus?.details?.database_url_type || 'SQLite'}
             </span>
           </div>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400 px-1 font-mono">
-          <span>DriftGuard v1.0</span>
-          <span className="text-emerald-400 font-semibold">Production</span>
         </div>
       </div>
     </aside>

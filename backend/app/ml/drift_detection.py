@@ -218,6 +218,23 @@ def detect_window_drift(
         # Population Stability Index (PSI)
         psi_val = calculate_psi(base_vals, curr_vals)
 
+        # Compute 7-bin histogram comparisons for baseline vs current visualization
+        min_v = float(min(np.min(base_vals), np.min(curr_vals)))
+        max_v = float(max(np.max(base_vals), np.max(curr_vals)))
+        hist_bins = np.linspace(min_v, max_v, 8)
+        b_counts, _ = np.histogram(base_vals, bins=hist_bins)
+        c_counts, _ = np.histogram(curr_vals, bins=hist_bins)
+        b_pcts = (b_counts / max(1, len(base_vals))) * 100.0
+        c_pcts = (c_counts / max(1, len(curr_vals))) * 100.0
+        dist_comparison = [
+            {
+                "bin_label": f"{hist_bins[i]:.0f}-{hist_bins[i+1]:.0f}" if max_v > 10 else f"{hist_bins[i]:.2f}-{hist_bins[i+1]:.2f}",
+                "baseline_pct": float(round(b_pcts[i], 1)),
+                "current_pct": float(round(c_pcts[i], 1))
+            }
+            for i in range(len(b_counts))
+        ]
+
         feature_results[col] = {
             "type": "numerical",
             "test_type": "kolmogorov_smirnov",
@@ -229,6 +246,7 @@ def detect_window_drift(
             "baseline_mean": float(round(np.mean(base_vals), 3)),
             "current_mean": float(round(np.mean(curr_vals), 3)),
             "mean_shift": float(round(np.mean(curr_vals) - np.mean(base_vals), 3)),
+            "distribution_comparison": dist_comparison,
             "drift_detected": False  # Updated after multiple testing correction
         }
 
@@ -290,6 +308,15 @@ def detect_window_drift(
 
         drift_detected = bool(chi_p < alpha and (psi_val >= 0.10 or tvd >= 0.12))
 
+        cat_dist_comparison = [
+            {
+                "bin_label": str(cat),
+                "baseline_pct": float(round(b_counts.get(cat, 0.0) * 100.0, 1)),
+                "current_pct": float(round(c_counts.get(cat, 0.0) * 100.0, 1))
+            }
+            for cat in all_cats
+        ]
+
         feature_results[col] = {
             "type": "categorical",
             "test_type": "chi_square",
@@ -298,6 +325,7 @@ def detect_window_drift(
             "bh_q_value": chi_p,
             "psi": psi_val,
             "total_variation_distance": float(round(tvd, 4)),
+            "distribution_comparison": cat_dist_comparison,
             "is_statistically_significant": bool(chi_p < alpha),
             "drift_detected": drift_detected
         }

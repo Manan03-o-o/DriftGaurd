@@ -6,6 +6,7 @@ from app.schemas.streams import StreamReplayRequest
 from app.ml.data_generation import get_dataset, simulate_stream_batch
 from app.ml.training import load_model_artifact
 from app.ml.drift_detection import detect_window_drift
+from app.services.alert_service import AlertService
 from app.core.logging import logger
 
 
@@ -97,6 +98,12 @@ class StreamService:
                 )
                 db.add(window)
                 db.commit()
+
+                # Generate Smart Alerts for replay batches
+                try:
+                    AlertService.generate_alerts_for_window(db, window, model)
+                except Exception:
+                    pass
 
         db.refresh(stream)
         return stream

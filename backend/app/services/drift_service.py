@@ -5,6 +5,7 @@ from app.database.models import MonitoringWindow, ModelRegistration, PredictionB
 from app.schemas.drift import DriftAnalysisRequest, DriftSummaryResponse, MonitoringWindowResponse
 from app.ml.data_generation import get_dataset
 from app.ml.drift_detection import detect_window_drift
+from app.services.alert_service import AlertService
 
 
 class DriftService:
@@ -56,6 +57,13 @@ class DriftService:
         db.add(window)
         db.commit()
         db.refresh(window)
+
+        # Automatically generate actionable Smart Alerts
+        try:
+            AlertService.generate_alerts_for_window(db, window, model)
+        except Exception as e:
+            pass
+
         return window
 
     @staticmethod

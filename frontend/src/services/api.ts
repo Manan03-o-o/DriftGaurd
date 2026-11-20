@@ -1,6 +1,11 @@
 import type {
   SystemStatus,
   ModelRegistration,
+  ModelExplainability,
+  ModelComparison,
+  Alert,
+  AlertStats,
+  DataQualityAudit,
   StreamSession,
   DriftSummary,
   MonitoringWindow,
@@ -43,6 +48,9 @@ export const api = {
   // System
   getHealth: () => request<{ status: string; service: string; version: string }>('/health'),
   getSystemStatus: () => request<SystemStatus>('/api/v1/system/status'),
+  resetDemoData: () => request<{ status: string; message: string }>('/api/v1/system/reset-demo', { method: 'POST' }),
+  getReport: (modelId: string) => request<any>(`/api/v1/reports/model/${modelId}`),
+  getReportHtmlUrl: (modelId: string) => `${API_BASE}/api/v1/reports/model/${modelId}/html`,
 
   // Models
   getModels: () => request<ModelRegistration[]>('/api/v1/models'),
@@ -59,6 +67,15 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(params)
   }),
+  activateModel: (id: string) => request<ModelRegistration>(`/api/v1/models/${id}/activate`, {
+    method: 'POST'
+  }),
+  compareModels: (params: { champion_id: string; challenger_id: string; tolerance?: number }) =>
+    request<ModelComparison>('/api/v1/models/compare', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    }),
+  getModelExplainability: (id: string) => request<ModelExplainability>(`/api/v1/models/${id}/explainability`),
 
   // Streams
   replayStream: (params: {
@@ -121,5 +138,58 @@ export const api = {
     body: JSON.stringify(params)
   }),
   getExperiments: () => request<Experiment[]>('/api/v1/policies/experiments'),
-  getExperiment: (id: string) => request<Experiment>(`/api/v1/policies/experiments/${id}`)
+  getExperiment: (id: string) => request<Experiment>(`/api/v1/policies/experiments/${id}`),
+
+  // Smart Alerts
+  getAlerts: (params?: { model_id?: string; severity?: string; is_resolved?: boolean; limit?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.model_id) q.append('model_id', params.model_id);
+    if (params?.severity) q.append('severity', params.severity);
+    if (params?.is_resolved !== undefined) q.append('is_resolved', params.is_resolved.toString());
+    if (params?.limit) q.append('limit', params.limit.toString());
+    const queryStr = q.toString() ? `?${q.toString()}` : '';
+    return request<Alert[]>(`/api/v1/alerts${queryStr}`);
+  },
+  getAlertStats: (modelId?: string) => {
+    const q = modelId ? `?model_id=${modelId}` : '';
+    return request<AlertStats>(`/api/v1/alerts/stats${q}`);
+  },
+  markAlertRead: (id: string) => request<Alert>(`/api/v1/alerts/${id}/read`, { method: 'PATCH' }),
+  resolveAlert: (id: string) => request<Alert>(`/api/v1/alerts/${id}/resolve`, { method: 'PATCH' }),
+  markAllAlertsRead: (modelId?: string) => {
+    const q = modelId ? `?model_id=${modelId}` : '';
+    return request<{ marked_read_count: number }>(`/api/v1/alerts/read-all${q}`, { method: 'POST' });
+  },
+
+  // Data Quality
+  runDataQualityAudit: (params: { model_id: string; dataset_name?: string; records?: any[] }) =>
+    request<DataQualityAudit>('/api/v1/quality/audit', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    }),
+  uploadDataQualityCsv: async (modelId: string, file: File): Promise<DataQualityAudit> => {
+    const formData = new FormData();
+    formData.append('model_id', modelId);
+    formData.append('file', file);
+    const url = `${API_BASE}/api/v1/quality/upload-csv`;
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData
+    });
+    if (!response.ok) {
+      let errStr = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const j = await response.json();
+        if (j.detail) errStr = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail);
+      } catch (_) {}
+      throw new Error(errStr);
+    }
+    return response.json();
+  },
+  getDataQualityHistory: (modelId?: string, limit: number = 20) => {
+    const q = new URLSearchParams();
+    if (modelId) q.append('model_id', modelId);
+    q.append('limit', limit.toString());
+    return request<DataQualityAudit[]>(`/api/v1/quality/history?${q.toString()}`);
+  }
 };

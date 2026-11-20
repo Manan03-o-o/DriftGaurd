@@ -42,6 +42,75 @@ export interface ModelRegistration {
   created_at: string;
 }
 
+export interface FeatureImportanceItem {
+  feature: string;
+  raw_feature: string;
+  importance: number;
+  percentage: number;
+}
+
+export interface ModelExplainability {
+  model_id: string;
+  model_name: string;
+  version: string;
+  algorithm: string;
+  method: string;
+  feature_importances: FeatureImportanceItem[];
+  top_features: string[];
+  sample_prediction_explanation?: {
+    top_risk_driver: string;
+    secondary_risk_driver: string;
+    summary: string;
+  };
+  educational_disclaimer: string;
+}
+
+export interface ModelComparison {
+  champion: {
+    id: string;
+    name: string;
+    version: string;
+    algorithm: string;
+    dataset_name: string;
+    created_at?: string;
+    metrics: {
+      accuracy: number;
+      precision: number;
+      recall: number;
+      f1_macro: number;
+      roc_auc?: number;
+      pr_auc?: number;
+      confusion_matrix: number[][];
+    };
+  };
+  challenger: {
+    id: string;
+    name: string;
+    version: string;
+    algorithm: string;
+    dataset_name: string;
+    created_at?: string;
+    metrics: {
+      accuracy: number;
+      precision: number;
+      recall: number;
+      f1_macro: number;
+      roc_auc?: number;
+      pr_auc?: number;
+      confusion_matrix: number[][];
+    };
+  };
+  delta_metrics: {
+    delta_f1_macro: number;
+    delta_accuracy: number;
+    delta_precision: number;
+    delta_recall: number;
+  };
+  recommendation: string;
+  is_eligible_for_promotion: boolean;
+  tolerance_applied: number;
+}
+
 export interface PredictionBatchPreview {
   id: string;
   batch_index: number;
@@ -76,8 +145,42 @@ export interface FeatureDriftResult {
   baseline_mean?: number;
   current_mean?: number;
   mean_shift?: number;
+  distribution_comparison?: Array<{
+    bin_label: string;
+    baseline_pct: number;
+    current_pct: number;
+  }>;
   is_statistically_significant: boolean;
   drift_detected: boolean;
+}
+
+export interface Alert {
+  id: string;
+  model_id: string;
+  window_id?: string;
+  stream_id?: string;
+  batch_id?: string;
+  severity: 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  title: string;
+  message: string;
+  affected_feature?: string;
+  metric_name?: string;
+  metric_value?: number;
+  threshold?: number;
+  recommended_action: string;
+  is_read: boolean;
+  is_resolved: boolean;
+  created_at: string;
+}
+
+export interface AlertStats {
+  total_alerts: number;
+  unresolved_alerts: number;
+  critical_alerts: number;
+  high_alerts: number;
+  medium_alerts: number;
+  low_alerts: number;
+  info_alerts: number;
 }
 
 export interface MonitoringWindow {
@@ -203,4 +306,30 @@ export interface SystemStatus {
     database_url_type: string;
     debug: boolean;
   };
+}
+
+export interface DataQualityAudit {
+  id: string;
+  model_id: string;
+  dataset_name: string;
+  records_count: number;
+  overall_score: number;
+  missing_values_count: number;
+  missing_percentage: number;
+  duplicate_rows_count: number;
+  outlier_count: number;
+  schema_valid: boolean;
+  validation_errors: string[];
+  feature_scores: Record<string, {
+    feature: string;
+    score: number;
+    missing_count: number;
+    missing_pct: number;
+    outlier_count: number;
+    outlier_pct: number;
+    invalid_range_count: number;
+    unexpected_categories: string[];
+    status: 'EXCELLENT' | 'ACCEPTABLE' | 'DEGRADED' | 'MISSING_COLUMN';
+  }>;
+  created_at: string;
 }

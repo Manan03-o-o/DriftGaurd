@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Activity,
   Cpu,
@@ -7,7 +7,10 @@ import {
   ShieldCheck,
   ArrowRight,
   Info,
-  Layers
+  Layers,
+  Calendar,
+  PlusCircle,
+  Database
 } from 'lucide-react';
 import { MetricCard } from '../components/MetricCard';
 import { StatusBadge } from '../components/StatusBadge';
@@ -29,36 +32,101 @@ import {
 
 interface OverviewPageProps {
   model: ModelRegistration | null;
+  models?: ModelRegistration[];
+  selectedModelId?: string;
+  onSelectModel?: (id: string) => void;
   driftSummary: DriftSummary | null;
   qualityHistory: ModelQualityHistory | null;
   experiments: Experiment[];
   onNavigate: (tab: string) => void;
   onOpenReplay: () => void;
   onOpenExperiment: () => void;
+  onOpenTrainModal?: () => void;
 }
 
 export const OverviewPage: React.FC<OverviewPageProps> = ({
   model,
+  models = [],
+  selectedModelId,
+  onSelectModel,
   driftSummary,
   qualityHistory,
-  experiments: _experiments,
+  experiments = [],
   onNavigate,
   onOpenReplay,
-  onOpenExperiment
+  onOpenExperiment,
+  onOpenTrainModal
 }) => {
-  const latestQuality = qualityHistory?.snapshots?.[0];
+  const [timeRange, setTimeRange] = useState<'all' | '24h' | '7d' | '30d'>('all');
 
+  const latestQuality = qualityHistory?.snapshots?.[0];
   const baselineF1 = model?.baseline_metrics?.primary_f1 ?? 0;
   const currentF1 = latestQuality?.f1_macro ?? baselineF1;
   const deltaF1 = currentF1 - baselineF1;
 
-  // Prepare chart data for drift severity distribution
+  // Filter windows based on time range
+  const allWindows = driftSummary?.recent_windows || [];
+  const filteredWindows = React.useMemo(() => {
+    if (timeRange === 'all') return allWindows;
+    const now = new Date().getTime();
+    const rangeMs =
+      timeRange === '24h'
+        ? 24 * 60 * 60 * 1000
+        : timeRange === '7d'
+        ? 7 * 24 * 60 * 60 * 1000
+        : 30 * 24 * 60 * 60 * 1000;
+    return allWindows.filter((w) => now - new Date(w.created_at).getTime() <= rangeMs);
+  }, [allWindows, timeRange]);
+
+  // Status counts for filtered range
+  const statusCounts = React.useMemo(() => {
+    const counts = { NONE: 0, LOW: 0, MEDIUM: 0, HIGH: 0 };
+    filteredWindows.forEach((w) => {
+      const s = (w.overall_drift_status || 'NONE') as keyof typeof counts;
+      if (counts[s] !== undefined) counts[s]++;
+    });
+    return counts;
+  }, [filteredWindows]);
+
   const chartData = [
-    { name: 'None', count: driftSummary?.status_distribution?.NONE || 0, color: '#10b981' },
-    { name: 'Low', count: driftSummary?.status_distribution?.LOW || 0, color: '#3b82f6' },
-    { name: 'Moderate', count: driftSummary?.status_distribution?.MEDIUM || 0, color: '#f59e0b' },
-    { name: 'High', count: driftSummary?.status_distribution?.HIGH || 0, color: '#f43f5e' },
+    { name: 'None', count: statusCounts.NONE, color: '#10b981' },
+    { name: 'Low', count: statusCounts.LOW, color: '#3b82f6' },
+    { name: 'Moderate', count: statusCounts.MEDIUM, color: '#f59e0b' },
+    { name: 'High', count: statusCounts.HIGH, color: '#f43f5e' },
   ];
+
+  // Total retraining events
+  const totalRetrains = experiments.reduce((acc, exp) => {
+    const gated = exp.policy_comparison?.policy_results?.gated_retraining?.total_retrains || 0;
+    const drift = exp.policy_comparison?.policy_results?.drift_triggered?.total_retrains || 0;
+    return acc + gated + drift;
+  }, 0);
+
+  // Active models count
+  const activeModelsCount = models.filter((m) => m.is_active).length;
+
+  if (!model && models.length === 0) {
+    return (
+      <div className="glass-panel p-12 rounded-2xl text-center space-y-4 max-w-lg mx-auto mt-12 border border-slate-800">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center mx-auto border border-indigo-500/30">
+          <Cpu className="w-6 h-6" />
+        </div>
+        <h3 className="text-lg font-bold text-white">No Machine Learning Models Registered</h3>
+        <p className="text-xs text-slate-400">
+          Initialize DriftGuard by training a baseline credit default classifier or scikit-learn pipeline.
+        </p>
+        {onOpenTrainModal && (
+          <button
+            onClick={onOpenTrainModal}
+            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition flex items-center gap-2 mx-auto"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Train First Baseline Model</span>
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -73,32 +141,79 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
         </div>
       </div>
 
+      {/* Filter and Date-Range Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 glass-panel p-3.5 rounded-2xl">
+        <div className="flex items-center gap-3">
+          {models.length > 0 && onSelectModel && (
+            <div className="flex items-center gap-2 text-xs">
+              <Database className="w-4 h-4 text-indigo-400" />
+              <span className="text-slate-400 font-medium">Scope Model:</span>
+              <select
+                value={selectedModelId || model?.id || ''}
+                onChange={(e) => onSelectModel(e.target.value)}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 outline-none cursor-pointer"
+              >
+                {models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} (v{m.version}) {m.is_active ? '★ Active Champion' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 text-xs">
+          <Calendar className="w-4 h-4 text-slate-400" />
+          <span className="text-slate-400 font-medium">Date Range:</span>
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900 border border-slate-800">
+            {(['all', '24h', '7d', '30d'] as const).map((range) => (
+              <button
+                key={range}
+                onClick={() => setTimeRange(range)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold uppercase transition ${
+                  timeRange === range
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {range}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Top Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Active Model Baseline"
           value={model ? `${model.name}` : 'No Model'}
           subtitle={`Algorithm: ${model?.algorithm || 'None'} | v${model?.version || '1.0'}`}
+          change={`${activeModelsCount} Active / ${models.length} Total`}
+          changeType="positive"
           icon={<Cpu className="w-5 h-5" />}
         />
         <MetricCard
           title="Analyzed Windows"
-          value={driftSummary?.total_windows_analyzed ?? 0}
+          value={filteredWindows.length}
           subtitle={`Latest Status: ${driftSummary?.latest_window_status || 'NONE'}`}
+          change={timeRange === 'all' ? 'All recorded history' : `Filtered to ${timeRange}`}
+          changeType="neutral"
           icon={<Activity className="w-5 h-5" />}
         />
         <MetricCard
           title="Active Drift Alerts"
-          value={driftSummary?.active_alerts_count ?? 0}
+          value={statusCounts.MEDIUM + statusCounts.HIGH}
           subtitle="Windows with Medium/High Shift"
-          change={driftSummary?.active_alerts_count ? 'Attention Required' : 'Stable'}
-          changeType={driftSummary?.active_alerts_count ? 'negative' : 'positive'}
+          change={statusCounts.MEDIUM + statusCounts.HIGH > 0 ? 'Attention Required' : 'Stable'}
+          changeType={statusCounts.MEDIUM + statusCounts.HIGH > 0 ? 'negative' : 'positive'}
           icon={<AlertTriangle className="w-5 h-5" />}
         />
         <MetricCard
           title="Current Model Macro-F1"
           value={currentF1.toFixed(3)}
-          subtitle={`Baseline: ${baselineF1.toFixed(3)}`}
+          subtitle={`Baseline: ${baselineF1.toFixed(3)} | Retrains: ${totalRetrains}`}
           change={`${deltaF1 >= 0 ? '+' : ''}${deltaF1.toFixed(3)} Δ`}
           changeType={deltaF1 < -0.05 ? 'negative' : deltaF1 > 0 ? 'positive' : 'neutral'}
           icon={<TrendingUp className="w-5 h-5" />}
@@ -112,7 +227,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-bold text-white tracking-wide">Monitoring Window Drift Severity</h3>
-              <p className="text-xs text-slate-400">Distribution across all analyzed streaming batches</p>
+              <p className="text-xs text-slate-400">Distribution across analyzed streaming batches ({timeRange})</p>
             </div>
             <button
               onClick={() => onNavigate('drift')}
@@ -225,7 +340,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
             onClick={() => onNavigate('drift')}
             className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition"
           >
-            View All ({driftSummary?.total_windows_analyzed ?? 0})
+            View All ({filteredWindows.length})
           </button>
         </div>
 
@@ -242,8 +357,8 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-slate-300">
-              {driftSummary?.recent_windows && driftSummary.recent_windows.length > 0 ? (
-                driftSummary.recent_windows.slice(0, 5).map((w) => (
+              {filteredWindows.length > 0 ? (
+                filteredWindows.slice(0, 5).map((w) => (
                   <tr key={w.id} className="hover:bg-slate-800/40 transition">
                     <td className="px-5 py-3.5 font-medium text-white flex items-center gap-2">
                       <Layers className="w-3.5 h-3.5 text-indigo-400" />
@@ -272,7 +387,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               ) : (
                 <tr>
                   <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
-                    No monitoring windows recorded yet. Click "Replay Stream" to simulate live batches.
+                    No monitoring windows found for this filter. Click "Replay Stream" to simulate live batches.
                   </td>
                 </tr>
               )}
