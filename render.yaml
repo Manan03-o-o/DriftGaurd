@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: driftguard-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        value: sqlite:///./driftguard.db   # Render persistent disk or swap for Postgres
+      - key: CORS_ORIGINS
+        value: "https://drift-gaurd.vercel.app,https://driftgaurd.vercel.app,http://localhost:5173"

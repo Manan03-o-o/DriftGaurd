@@ -1,18 +1,11 @@
 import React, { useState } from 'react';
 import {
-  HelpCircle,
   Clock,
   Activity,
-  Layers,
   Sliders,
-  TrendingDown,
   BarChart2,
-  AlertTriangle,
-  CheckCircle2,
   Info,
-  Maximize2,
   Flame,
-  ArrowRight
 } from 'lucide-react';
 import { StatusBadge } from '../components/StatusBadge';
 import type { MonitoringWindow } from '../types';

@@ -1,16 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ShieldCheck,
-  CheckCircle2,
   AlertTriangle,
   UploadCloud,
-  FileText,
   RotateCcw,
-  Sparkles,
-  Info,
-  Clock,
-  Layers,
-  ArrowRight
+  Clock
 } from 'lucide-react';
 import type { DataQualityAudit, ModelRegistration } from '../types';
 import { api } from '../services/api';
@@ -24,9 +18,9 @@ interface DataQualityPageProps {
 
 export const DataQualityPage: React.FC<DataQualityPageProps> = ({
   model,
-  models,
+  models: _models,
   selectedModelId,
-  onSelectModel
+  onSelectModel: _onSelectModel
 }) => {
   const [audits, setAudits] = useState<DataQualityAudit[]>([]);
   const [activeAudit, setActiveAudit] = useState<DataQualityAudit | null>(null);

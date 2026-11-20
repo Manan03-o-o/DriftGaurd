@@ -1,17 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Bell,
-  AlertTriangle,
   CheckCircle2,
-  ShieldAlert,
-  Info,
-  Clock,
   ArrowRight,
-  Filter,
   Check,
   RotateCcw,
-  Sparkles,
-  ExternalLink
+  Sparkles
 } from 'lucide-react';
 import type { Alert, AlertStats, ModelRegistration } from '../types';
 import { api } from '../services/api';
@@ -26,10 +20,8 @@ interface AlertsCenterPageProps {
 
 export const AlertsCenterPage: React.FC<AlertsCenterPageProps> = ({
   models,
-  selectedModelId,
   onNavigate,
   onOpenReplayModal,
-  onOpenExperiment
 }) => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [stats, setStats] = useState<AlertStats | null>(null);

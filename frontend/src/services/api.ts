@@ -14,19 +14,37 @@ import type {
   Experiment
 } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+// In production (Vercel), VITE_API_URL points to the Render backend.
+// In local dev, it is empty so the Vite proxy handles /api and /health.
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
-async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+// Render free-tier instances sleep after inactivity. On first request the
+// server takes up to ~30 s to wake up. We retry once after a short delay so
+// the UI recovers automatically instead of showing a permanent error.
+async function request<T>(endpoint: string, options?: RequestInit, _retry = true): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options?.headers || {})
+    ...(options?.headers as Record<string, string> || {})
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch (networkErr) {
+    // Network-level failure (e.g. backend cold-starting). Retry once after 3 s.
+    if (_retry) {
+      await new Promise(r => setTimeout(r, 3000));
+      return request<T>(endpoint, options, false);
+    }
+    throw new Error(`Network error: ${(networkErr as Error).message}`);
+  }
+
+  // 503 = Render cold-start in progress — retry once
+  if (response.status === 503 && _retry) {
+    await new Promise(r => setTimeout(r, 3000));
+    return request<T>(endpoint, options, false);
+  }
 
   if (!response.ok) {
     let errorDetail = `HTTP ${response.status}: ${response.statusText}`;

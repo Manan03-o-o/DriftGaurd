@@ -9,18 +9,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
-  ShieldCheck,
   FileText,
   Activity,
   Printer,
   ExternalLink,
-  ChevronRight,
-  Sliders,
-  TrendingDown,
-  Layers,
-  Cpu
 } from 'lucide-react';
-import type { ModelRegistration, MonitoringWindow, StreamSession } from '../types';
+import type { ModelRegistration } from '../types';
 import { api } from '../services/api';
 
 interface SimulationDemoPageProps {
@@ -38,7 +32,7 @@ export const SimulationDemoPage: React.FC<SimulationDemoPageProps> = ({
   model,
   models,
   selectedModelId,
-  onSelectModel,
+  onSelectModel: _onSelectModel,
   onNavigate,
   onRefreshAll,
   showSuccess,
@@ -158,7 +152,7 @@ export const SimulationDemoPage: React.FC<SimulationDemoPageProps> = ({
         showSuccess('Step 3: Ingested stationary batch without shift. Baseline status remains STABLE.');
       } else if (step === 4 || step === 5) {
         // Step 4/5: Trigger Mean Shift
-        const s = await api.replayStream({
+        await api.replayStream({
           model_id: activeModelId,
           scenario: 'mean_shift',
           batch_size: 150,

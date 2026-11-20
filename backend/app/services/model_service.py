@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session

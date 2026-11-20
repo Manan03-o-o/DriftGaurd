@@ -40,9 +40,12 @@ app = FastAPI(
 )
 
 # CORS Middleware
+# allow_origins="*" cannot be combined with allow_credentials=True (browser spec).
+# We use the explicit origin list from settings; Render env var CORS_ORIGINS can
+# extend it at deploy time (comma-separated string).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Facilitates local student dev across localhost ports
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
